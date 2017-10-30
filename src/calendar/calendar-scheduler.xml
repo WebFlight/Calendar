@@ -121,6 +121,44 @@
             <description>Boolean attribute to define whether the amount of events for one single day should be limited.</description>
         </property>
 
+        <!--SpacesWorks Event data -->
+        <property key="numberOfPeople" type="attribute" entityProperty="eventEntity" required="false">
+            <caption>Number of people</caption>
+            <category>Event data</category>
+            <description>The number of people attending the event.</description>
+            <attributeTypes>
+                <attributeType name="Integer" />
+            </attributeTypes>
+        </property>
+        <property key="eventNotes" type="attribute" entityProperty="eventEntity" required="false">
+            <caption>Event notes</caption>
+            <category>Event data</category>
+            <description>Any notes that belong to the event.</description>
+            <attributeTypes>
+                <attributeType name="String" />
+            </attributeTypes>
+        </property>
+        <property key="eventOptionsEntity" type="entity" allowNonPersistableEntities="true">
+            <caption>Event options Entity</caption>
+            <category>Event data</category>
+            <description>The entity.</description>
+        </property>
+        <property key="eventOptionsPath" type="entity" isPath="yes" pathType="reference" entityProperty="eventOptionsEntity">
+            <caption>Options event reference</caption>
+            <category>Event data</category>
+            <description>The reference from an option to an event.</description>
+        </property>
+        <property key="eventCateringEntity" type="entity" allowNonPersistableEntities="true">
+            <caption>Event catering Entity</caption>
+            <category>Event data</category>
+            <description>The entity.</description>
+        </property>
+        <property key="eventCateringPath" type="entity" isPath="yes" pathType="reference" entityProperty="eventCateringEntity">
+            <caption>Event catering reference</caption>
+            <category>Event data</category>
+            <description>The reference from the event to the catering</description>
+        </property>
+
         <!-- BEHAVIOR -->
         <property key="onchangemf" type="microflow" required="false" entityProperty="eventEntity">
             <caption>On change</caption>

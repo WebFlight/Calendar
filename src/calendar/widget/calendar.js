@@ -623,6 +623,7 @@ define([
                 viewRender: lang.hitch(this, this._onViewChange), //is called when the view (start/end on month, week, etc) has changed
                 select: lang.hitch(this, this._onSelectionMade), //is called after a selection has been made
                 eventAfterAllRender: lang.hitch(this, this._onEventAfterAllRender),
+                eventRender: lang.hitch(this, this._onEventRender),
                 //appearance
                 timezone: "local",
                 views: this._views,
@@ -785,6 +786,45 @@ define([
             //     this._triggeredRenderAll = true;
             //     this._execMF(this._mxObj, this.onviewchangemf, lang.hitch(this, this._prepareEvents));
             // }
+        },
+
+        _onEventRender: function(event, element) {
+            var mxObj = event.mxobject,
+                nrOfPeople = Number(mxObj.get(this.numberOfPeople)) || 0,
+                hasNotes = !!mxObj.get(this.eventNotes);
+            console.log(hasNotes);
+
+            var $elem = $(element),
+                $content = $elem.find('.fc-content'),
+                $icons = $elem.find('fc-event-icons');
+
+            if (! $icons.length) {
+                $icons = $content.append('<div class="fc-event-icons"></div>').find('.fc-event-icons');
+            }
+
+            var mxFetch = key => new Promise((resolve, reject) => mxObj.fetch(key, resolve));
+
+            $elem.addClass('is-loading');
+            Promise.all([
+                mxFetch(this.eventOptionsPath),
+                mxFetch(this.eventCateringPath)
+            ]).then(values => {
+                var room_options = values[0];
+                var catering_options = values[1];
+
+                $icons.append('<span class="fc-event-icons__text"><i class="fc-event-icon fc-event-icons__people" />' + nrOfPeople + '</span>');
+                if (room_options) {
+                    $icons.append('<i class="fc-event-icon fc-event-icons__room-options" />');
+                }
+                if (catering_options) {
+                    $icons.append('<i class="fc-event-icon fc-event-icons__catering-options" />');
+                }
+                if (hasNotes) {
+                    $icons.append('<i class="fc-event-icon fc-event-icons__notes" />');
+                }
+                $elem.removeClass('is-loading');
+            });
+            console.log($elem, element);
         },
 
         _fetchPaginatedEvents: function(start, end) {
