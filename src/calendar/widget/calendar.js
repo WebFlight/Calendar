@@ -45,6 +45,7 @@ define([
 
         postCreate: function() {
             logger.debug(this.id + ".postCreate");
+            logger.level(1);
             this._colors = this.notused; //workaround for legacy users
             this._availableViews = this.notused1; //workaround for legacy users
             this._setDefaults(); //set default formatting options
@@ -198,11 +199,6 @@ define([
                 expectObj = null,
                 xpath = null,
                 errordiv = null;
-
-            if (this.resourceEntity) {
-                logger.debug(this.id + "._fetchObjects resources");
-                this._getResources(this.resourceEntity, lang.hitch(this, this._prepareResources));
-            }
 
             if (this.resourceEntity) {
                 logger.debug(this.id + "._fetchObjects resources");
@@ -740,9 +736,48 @@ define([
                 cb();
             }
         },
+        _onListViewChange: function(view, element) {
+            let categories = ['Time', 'Account', 'Location', 'Meeting room', 'Product', 'Status'];
+            let $elem = $(element);
+            let resource = this._getResources(this.resourceEntity, function () {
+                
+            })
+            let $heading = $elem.find('.fc-list-heading');
+            let $table = $elem.find('.fc-list-table');
+            let $thead = $table.find('thead');
 
+            if ($thead.length === 0) {
+                let head = '';
+                categories.forEach(function (category) {
+                    head += '<th>' + category + '</th>';
+                });
+
+                $thead = $table.prepend(
+                    '<thead>' +
+                        '<tr class="fc-list-table__head">' + head + '</tr>' +
+                    '</thead>'
+                );
+            }
+
+            console.log('heading:',$heading);
+            $heading.each(function () {
+                var colspanSize = categories.length;
+                var $elem = $(this);
+                var $td = $elem.find('td');
+                $elem.attr('colspan', colspanSize);
+                $td.attr('colspan', colspanSize);
+
+            })
+
+        },
         _onViewChange: function(view, element) {
+            if (['listWeek','listMonth','listYear'].indexOf(view.type) >= 0)
+            {
+                this._onListViewChange(view, element);
+            }
             logger.debug(this.id + "._onViewChange");
+            console.log(view);
+            console.log(element);
             //logger.debug("_onViewChange\nonviewChangeMF: ", this.onviewchangemf, "\nviewContextReference:", this.viewContextReference, "\n_mxObj", this._mxObj);
             var eventData = {
                 start: view.start,
@@ -788,16 +823,54 @@ define([
             // }
         },
 
+        _onListEventRender: function (event, element) {
+            console.log('event', event);
+            console.log(element);
+            var mxObj = event.mxobject,
+                time = moment(mxObj.get(this.startAttr)).format('LT') + ' - ' + moment(mxObj.get(this.endAttr)).format('LT'),
+                account = mxObj.get(this.titleAttr),
+                location = mxObj.get('location') || 'location',
+                room = mxObj.get('room') || 12,
+                product = mxObj.get('product') || 'prod',
+                status = mxObj.get('status') || 'pending';
+
+            element.html(
+                '<td class="fc-list-item-time fc-widget-content">' +
+                    time +
+                '</td>' +
+                '<td class="fc-list-item-title fc-widget-content">' +
+                    account +
+                '</td>' +
+                '<td class="fc-list-item-location fc-widget-content">' +
+                    location +
+                '</td>' +
+                '<td class="fc-list-item-room fc-widget-content">' +
+                    room +
+                '</td>' +
+                '<td class="fc-list-item-product fc-widget-content">' +
+                    product +
+                '</td>' +
+                '<td class="fc-list-item-status fc-widget-content">' +
+                    status +
+                '</td>'
+            );
+        },
+
         _onEventRender: function(event, element) {
+            logger.debug(this.id + '_onEventRender');
+            if (element.find('.fc-list-table')) {
+                this._onListEventRender(event, element);
+            }
+
             var mxObj = event.mxobject,
                 nrOfPeople = Number(mxObj.get(this.numberOfPeople)) || 0,
                 hasNotes = !!mxObj.get(this.eventNotes);
-            console.log(hasNotes);
 
             var $elem = $(element),
                 $content = $elem.find('.fc-content'),
                 $icons = $elem.find('fc-event-icons');
 
+            console.log($elem);
             if (! $icons.length) {
                 $icons = $content.append('<div class="fc-event-icons"></div>').find('.fc-event-icons');
             }
@@ -824,7 +897,6 @@ define([
                 }
                 $elem.removeClass('is-loading');
             });
-            console.log($elem, element);
         },
 
         _fetchPaginatedEvents: function(start, end) {

@@ -45,3 +45,7 @@
 .fc-event-icons__notes {
     background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAAsSAAALEgHS3X78AAAAX0lEQVQoz82RwQmAQAwEJ+Lf60BLsQRLsDRbuk7sYPzoQ+FO7+dACCw7EEioCdiARJ0dWEPdgYFv5FClgY5Gfirkhn6Owh8mYHyWgRm1NKt3kkpNeEqo9C83b+deruAApIRjC9ZFzHQAAAAASUVORK5CYII=');
 }
+
+.fc-list-table__head th {
+    border: none;
+}
