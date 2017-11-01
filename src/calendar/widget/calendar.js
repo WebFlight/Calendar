@@ -45,7 +45,6 @@ define([
 
         postCreate: function() {
             logger.debug(this.id + ".postCreate");
-            logger.level(1);
             this._colors = this.notused; //workaround for legacy users
             this._availableViews = this.notused1; //workaround for legacy users
             this._setDefaults(); //set default formatting options
@@ -339,41 +338,25 @@ define([
         _createEvents: function(objs, titles) {
             logger.debug(this.id + "._createEvents");
             var events = [],
-                objcolors = null,
-                resourceEntity = this.resourceEntity,
                 resourceEventPath = this.resourceEventPath,
+                groupResourcePath = this.groupResourcePath,
                 promises = [];
 
             $.each(objs, lang.hitch(this, function(index, obj) {
 
                 var promise = $.Deferred(lang.hitch(this, function(callback) {
                     obj.fetch(resourceEventPath, lang.hitch(this, function(resource) {
-                        var resourceRefId = (resource !== null) ? resource.getGuid() : 0;
-
-                        //get the colors
-                        if (this._colors.length > 0 && this.typeAttr) {
-                            objcolors = this._getObjectColors(obj);
-                        }
-                        //get the dates
-                        var start = new Date(obj.get(this.startAttr)),
-                            end = new Date(obj.get(this.endAttr)),
-                            //create a new calendar event
-                            newEvent = {
-                                title: titles[obj.getGuid()],
-                                resourceId: resourceRefId,
-                                start: start,
-                                end: end,
-                                allDay: obj.get(this.alldayAttr),
-                                editable: this.editable,
-                                mxobject: obj //we add the mxobject to be able to handle events with relative ease.
-                            };
-
-                        if (objcolors) {
-                            newEvent.backgroundColor = objcolors.backgroundColor;
-                            newEvent.borderColor = objcolors.borderColor;
-                            newEvent.textColor = objcolors.textColor;
+                        if (groupResourcePath) {
+                            //get the group
+                            resource.fetch(groupResourcePath, lang.hitch(this, function(group) {
+                                var newEvent = this.createExtendedEventObject(obj, titles, resource, group);
+                                events.push(newEvent);
+                                callback.resolve();
+                            }));
+                            return;
                         }
 
+                        var newEvent = this.createExtendedEventObject(obj, titles, resource);
                         events.push(newEvent);
                         callback.resolve();
                     }));
@@ -402,6 +385,34 @@ define([
                 }
                 this._eventSource = events;
             }));
+        },
+
+        createExtendedEventObject: function (mxObject, titles, resource, group) {
+            var resourceRefId = resource ? resource.getGuid() : 0,
+                resourceName = resource ? resource.get(this.resourceTitle) : null,
+                groupName = group ? group.get(this.groupTitle) : null,
+                start = new Date(mxObject.get(this.startAttr)),
+                end = new Date(mxObject.get(this.endAttr)),
+                objcolors = null;
+
+            //get the colors
+            if (this._colors.length > 0 && this.typeAttr) {
+                objcolors = this._getObjectColors(mxObject);
+            }
+            return {
+                title: titles[mxObject.getGuid()],
+                resourceId: resourceRefId,
+                resourceName: resourceName,
+                groupName: groupName,
+                start: start,
+                end: end,
+                allDay: mxObject.get(this.alldayAttr),
+                editable: this.editable,
+                mxobject: mxObject, //we add the mxobject to be able to handle events with relative ease.
+                backgroundColor: objcolors ? objcolors.backgroundColor : null,
+                borderColor: objcolors ? objcolors.borderColor : null,
+                textColor: objcolors ? objcolors.textColor : null,
+            };
         },
 
         _renderCalendar: function(events) {
@@ -736,48 +747,13 @@ define([
                 cb();
             }
         },
-        _onListViewChange: function(view, element) {
-            let categories = ['Time', 'Account', 'Location', 'Meeting room', 'Product', 'Status'];
-            let $elem = $(element);
-            let resource = this._getResources(this.resourceEntity, function () {
-                
-            })
-            let $heading = $elem.find('.fc-list-heading');
-            let $table = $elem.find('.fc-list-table');
-            let $thead = $table.find('thead');
 
-            if ($thead.length === 0) {
-                let head = '';
-                categories.forEach(function (category) {
-                    head += '<th>' + category + '</th>';
-                });
-
-                $thead = $table.prepend(
-                    '<thead>' +
-                        '<tr class="fc-list-table__head">' + head + '</tr>' +
-                    '</thead>'
-                );
-            }
-
-            console.log('heading:',$heading);
-            $heading.each(function () {
-                var colspanSize = categories.length;
-                var $elem = $(this);
-                var $td = $elem.find('td');
-                $elem.attr('colspan', colspanSize);
-                $td.attr('colspan', colspanSize);
-
-            })
-
-        },
         _onViewChange: function(view, element) {
-            if (['listWeek','listMonth','listYear'].indexOf(view.type) >= 0)
+            if (['listDay','listWeek','listMonth','listYear'].indexOf(view.type) >= 0)
             {
                 this._onListViewChange(view, element);
             }
             logger.debug(this.id + "._onViewChange");
-            console.log(view);
-            console.log(element);
             //logger.debug("_onViewChange\nonviewChangeMF: ", this.onviewchangemf, "\nviewContextReference:", this.viewContextReference, "\n_mxObj", this._mxObj);
             var eventData = {
                 start: view.start,
@@ -823,42 +799,24 @@ define([
             // }
         },
 
-        _onListEventRender: function (event, element) {
-            console.log('event', event);
-            console.log(element);
-            var mxObj = event.mxobject,
-                time = moment(mxObj.get(this.startAttr)).format('LT') + ' - ' + moment(mxObj.get(this.endAttr)).format('LT'),
-                account = mxObj.get(this.titleAttr),
-                location = mxObj.get('location') || 'location',
-                room = mxObj.get('room') || 12,
-                product = mxObj.get('product') || 'prod',
-                status = mxObj.get('status') || 'pending';
-
-            element.html(
-                '<td class="fc-list-item-time fc-widget-content">' +
-                    time +
-                '</td>' +
-                '<td class="fc-list-item-title fc-widget-content">' +
-                    account +
-                '</td>' +
-                '<td class="fc-list-item-location fc-widget-content">' +
-                    location +
-                '</td>' +
-                '<td class="fc-list-item-room fc-widget-content">' +
-                    room +
-                '</td>' +
-                '<td class="fc-list-item-product fc-widget-content">' +
-                    product +
-                '</td>' +
-                '<td class="fc-list-item-status fc-widget-content">' +
-                    status +
-                '</td>'
-            );
+        createEventIcons: function (nrOfPeople, roomOptions, cateringOptions, hasNotes) {
+            var $icons = $('<div>', {'class': 'fc-event-icons'});
+            $icons.append('<span class="fc-event-icons__text"><i class="fc-event-icon fc-event-icons__people" />' + nrOfPeople + '</span>');
+            if (roomOptions) {
+                $icons.append('<i class="fc-event-icon fc-event-icons__room-options" />');
+            }
+            if (cateringOptions) {
+                $icons.append('<i class="fc-event-icon fc-event-icons__catering-options" />');
+            }
+            if (hasNotes) {
+                $icons.append('<i class="fc-event-icon fc-event-icons__notes" />');
+            }
+            return $icons;
         },
 
         _onEventRender: function(event, element) {
             logger.debug(this.id + '_onEventRender');
-            if (element.find('.fc-list-table')) {
+            if (element.hasClass('fc-list-item')) {
                 this._onListEventRender(event, element);
             }
 
@@ -870,10 +828,7 @@ define([
                 $content = $elem.find('.fc-content'),
                 $icons = $elem.find('fc-event-icons');
 
-            console.log($elem);
-            if (! $icons.length) {
-                $icons = $content.append('<div class="fc-event-icons"></div>').find('.fc-event-icons');
-            }
+            console.log('event element:', $elem);
 
             var mxFetch = key => new Promise((resolve, reject) => mxObj.fetch(key, resolve));
 
@@ -884,17 +839,14 @@ define([
             ]).then(values => {
                 var room_options = values[0];
                 var catering_options = values[1];
+                var icons = this.createEventIcons(nrOfPeople, room_options, catering_options, hasNotes);
 
-                $icons.append('<span class="fc-event-icons__text"><i class="fc-event-icon fc-event-icons__people" />' + nrOfPeople + '</span>');
-                if (room_options) {
-                    $icons.append('<i class="fc-event-icon fc-event-icons__room-options" />');
+                if (!$icons.length) {
+                    $content.append(icons);
+                } else {
+                    $icons.replaceWith(icons);
                 }
-                if (catering_options) {
-                    $icons.append('<i class="fc-event-icon fc-event-icons__catering-options" />');
-                }
-                if (hasNotes) {
-                    $icons.append('<i class="fc-event-icon fc-event-icons__notes" />');
-                }
+
                 $elem.removeClass('is-loading');
             });
         },
@@ -983,7 +935,83 @@ define([
             }
 
             return defaultView;
-        }
+        },
+
+        _onListViewChange: function(view, element) {
+            let categories = ['Time', 'Account', 'Location', 'Meeting room', 'Product', 'Status'];
+            let $elem = $(element);
+            let $heading = $elem.find('.fc-list-heading');
+            let $table = $elem.find('.fc-list-table');
+            let $thead = $table.find('thead');
+
+            if ($thead.length === 0) {
+                let head = '';
+                categories.forEach(function (category) {
+                    head += '<th>' + category + '</th>';
+                });
+
+                $table.prepend(
+                    '<thead>' +
+                    '<tr class="fc-list-table__head">' + head + '</tr>' +
+                    '</thead>'
+                );
+            }
+
+            $heading.each(function () {
+                var colspanSize = categories.length;
+                var $elem = $(this);
+                var $td = $elem.find('td');
+                $elem.attr('colspan', colspanSize);
+                $td.attr('colspan', colspanSize);
+            });
+        },
+
+        _onListEventRender: function (event, element) {
+            var room = event.resourceName;
+            var group = event.groupName;
+            var mxObj = event.mxobject;
+            var statusColor = event.backgroundColor;
+            var time = moment(mxObj.get(this.startAttr)).format('LT') + ' - ' + moment(mxObj.get(this.endAttr)).format('LT'),
+                account = mxObj.get(this.titleAttr),
+                nrOfPeople = Number(mxObj.get(this.numberOfPeople)) || 0,
+                hasNotes = !!mxObj.get(this.eventNotes),
+                status = mxObj.get(this.eventStatus);
+
+            var mxFetch = key => new Promise((resolve, reject) => mxObj.fetch(key, resolve));
+
+            var $time = $('<td class="fc-list-item-time fc-widget-content">' +
+                            time +
+                        '</td>'),
+                $account = $('<td class="fc-list-item-title fc-widget-content">' +
+                                account +
+                            '</td>'),
+                $location = $('<td class="fc-list-item-location fc-widget-content">' +
+                                group +
+                            '</td>'),
+                $room = $('<td class="fc-list-item-room fc-widget-content">' +
+                                room +
+                            '</td>'),
+                $product = $('<td class="fc-list-item-product fc-widget-content"></td>'),
+                $status = $('<td class="fc-list-item-status fc-widget-content">' +
+                                '<span class="fc-event-dot"></span> ' + status +
+                            '</td>');
+
+            if (statusColor) {
+                $status.find('.fc-event-dot').css('background-color', statusColor);
+            }
+
+            element.html([$time, $account, $location, $room, $product, $status]);
+
+            Promise.all([
+                mxFetch(this.eventOptionsPath),
+                mxFetch(this.eventCateringPath)
+            ]).then(values => {
+                var room_options = values[0];
+                var catering_options = values[1];
+                var icons = this.createEventIcons(nrOfPeople, room_options, catering_options, hasNotes);
+                $product.append(icons);
+            });
+        },
     });
 });
 

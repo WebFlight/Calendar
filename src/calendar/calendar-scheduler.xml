@@ -138,6 +138,14 @@
                 <attributeType name="String" />
             </attributeTypes>
         </property>
+        <property key="eventStatus" type="attribute" entityProperty="eventEntity" required="false">
+            <caption>Event status</caption>
+            <category>Event data</category>
+            <description>The status of the event.</description>
+            <attributeTypes>
+                <attributeType name="Enum" />
+            </attributeTypes>
+        </property>
         <property key="eventOptionsEntity" type="entity" allowNonPersistableEntities="true">
             <caption>Event options Entity</caption>
             <category>Event data</category>

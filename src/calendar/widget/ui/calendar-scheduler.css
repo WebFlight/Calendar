@@ -48,4 +48,6 @@
 
 .fc-list-table__head th {
     border: none;
+    text-align: left;
+    padding: 8px 14px;
 }
