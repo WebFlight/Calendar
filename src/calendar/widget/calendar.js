@@ -810,10 +810,10 @@ define([
             };
 
             Object.keys(icons).forEach(key => {
-                let row = icons[key];
+                var row = icons[key];
                 if (! row[0]) return;
 
-                let html = (row[1] || rowHtml)
+                var html = (row[1] || rowHtml)
                     .replace('{{val}}', row[0])
                     .replace('{{icon}}', key);
                 $icons.append(html);
@@ -835,7 +835,6 @@ define([
                 $content = $elem.find('.fc-content'),
                 $icons = $elem.find('fc-event-icons');
 
-            console.log('event element:', $elem);
 
             var mxFetch = key => new Promise((resolve, reject) => mxObj.fetch(key, resolve));
 
@@ -944,14 +943,14 @@ define([
         },
 
         _onListViewChange: function(view, element) {
-            let categories = ['Time', 'Account', 'Location', 'Meeting room', 'Product', 'Status'];
-            let $elem = $(element);
-            let $heading = $elem.find('.fc-list-heading');
-            let $table = $elem.find('.fc-list-table');
-            let $thead = $table.find('thead');
+            var categories = ['Time', 'Account', 'Location', 'Meeting room', 'Product', 'Status'];
+            var $elem = $(element);
+            var $heading = $elem.find('.fc-list-heading');
+            var $table = $elem.find('.fc-list-table');
+            var $thead = $table.find('thead');
 
             if ($thead.length === 0) {
-                let head = categories.map(category => '<th>' + category + '</th>').join();
+                var head = categories.map(category => '<th>' + category + '</th>').join();
 
                 $table.prepend(
                     '<thead>' +
@@ -982,13 +981,13 @@ define([
 
             var mxFetch = key => new Promise((resolve, reject) => mxObj.fetch(key, resolve));
 
-            let html = '<td class="fc-list-item-time fc-widget-content">'+time+'</td>'
+            var html = '<td class="fc-list-item-time fc-widget-content">'+time+'</td>'
                 + '<td class="fc-list-item-title fc-widget-content">' + account + '</td>'
                 + '<td class="fc-list-item-location fc-widget-content">' + group + '</td>'
                 + '<td class="fc-list-item-room fc-widget-content">' + room + '</td>'
                 + '<td class="fc-list-item-product fc-widget-content"></td>'
                 + '<td class="fc-list-item-status fc-widget-content"><span class="fc-event-dot"></span> ' + status + '</td>';
-            let $html = $(html);
+            var $html = $(html);
 
             if (statusColor) {
                 $html.find('.fc-event-dot').css('background-color', statusColor);
@@ -1003,7 +1002,7 @@ define([
                 var room_options = values[0];
                 var catering_options = values[1];
                 var icons = this.createEventIcons(nrOfPeople, room_options, catering_options, hasNotes);
-                $html.find('.fc-list-item-product').append(icons);
+                $html.filter('.fc-list-item-product').append(icons);
             });
         },
     });
