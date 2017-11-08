@@ -73,13 +73,11 @@ define([
 
         update: function(obj, callback) {
             logger.debug(this.id + ".update");
-
             this._mxObj = obj;
             this._resetSubscriptions();
 
             this._fetchObjects();
             this._renderCalendar();
-
             this._executeCallback(callback, "update");
         },
 
@@ -93,10 +91,9 @@ define([
             if (options.views.timelineThreeDays) {
                 options.views.timelineThreeDays = {
                     eventLimit: options.views.timelineThreeDays.eventLimit,
-                    type: "timeline",
-                    duration: {
-                        days: 3
-                    }
+                    titleFormat: options.views.timelineThreeDays.titleFormat,
+                    type: 'timeline',
+                    duration: { days: 3 }
                 };
             }
             options.resources = [];
@@ -139,7 +136,7 @@ define([
                     resource.fetch(this.groupResourcePath, lang.hitch(this, function(group) {
                         if (group) {
                             fullCalenderResource.group = group.get(groupTitle);
-                        } 
+                        }
                         node.fullCalendar("addResource", fullCalenderResource);
                     }))
                     return;
@@ -379,6 +376,11 @@ define([
                     if (this._mxObj && this._mxObj.get(this.startPos)) {
                         this._fcNode.fullCalendar("gotoDate", new Date(this._mxObj.get(this.startPos)));
                     }
+
+                    this._onListViewChange(
+                        this._fcNode.fullCalendar('getView'),
+                        this._fcNode
+                    )
                 } else {
                     //else create the calendar
                     this._renderCalendar(events);
@@ -437,7 +439,9 @@ define([
             logger.debug(this.id + "._onEventChange", event);
             var obj = event.mxobject;
             this._setVariables(obj, event, this.startAttr, this.endAttr, event.allDay);
-            this._execMF(obj, this.onchangemf);
+            this._setResourceReference(obj, this.neweventref, event.resourceId, this._mxObj);
+            logger.debug(obj)
+            this._execMF(obj, this.onchangemf, () => alert("hoi tim"));
         },
 
         _onEventClick: function(event) {
@@ -462,7 +466,9 @@ define([
                     entity: this.eventEntity,
                     callback: function(obj) {
                         this._setVariables(obj, eventData, this.startAttr, this.endAttr, allDay);
-                        this._setResourceReference(obj, this.neweventref, event.resourceId, this._mxObj);
+                        if (resource) {
+                            this._setResourceReference(obj, this.neweventref, resource.id, this._mxObj);
+                        }
                         if ((resource || this._mxObj) && this.neweventref !== "") {
                             obj.addReference(this.neweventref.split("/")[0], (resource ? resource.id : this._mxObj.getGuid()));
                         }
@@ -749,11 +755,8 @@ define([
         },
 
         _onViewChange: function(view, element) {
-            if (['listDay','listWeek','listMonth','listYear'].indexOf(view.type) >= 0)
-            {
-                this._onListViewChange(view, element);
-            }
             logger.debug(this.id + "._onViewChange");
+            this._onListViewChange(view, element);
             //logger.debug("_onViewChange\nonviewChangeMF: ", this.onviewchangemf, "\nviewContextReference:", this.viewContextReference, "\n_mxObj", this._mxObj);
             var eventData = {
                 start: view.start,
@@ -835,25 +838,21 @@ define([
                 $content = $elem.find('.fc-content'),
                 $icons = $elem.find('fc-event-icons');
 
-
-            var mxFetch = key => new Promise((resolve, reject) => mxObj.fetch(key, resolve));
-
             $elem.addClass('is-loading');
-            Promise.all([
-                mxFetch(this.eventOptionsPath),
-                mxFetch(this.eventCateringPath)
-            ]).then(values => {
-                var room_options = values[0];
-                var catering_options = values[1];
-                var icons = this.createEventIcons(nrOfPeople, room_options, catering_options, hasNotes);
-                if (!$icons.length) {
-                    $content.append(icons);
-                } else {
-                    $icons.replaceWith(icons);
+            mxObj.fetch(this.eventOptionPath, lang.hitch(this, function (eventOption) {
+                if (eventOption) {
+                    var catering = eventOption.get('Catering') === 'Yes';
+                    var equipment = eventOption.get('Equipment') === 'Yes';
+                    var icons = this.createEventIcons(nrOfPeople, equipment, catering, hasNotes);
+                    if (!$icons.length) {
+                        $content.append(icons);
+                    } else {
+                        $icons.replaceWith(icons);
+                    }
                 }
 
                 $elem.removeClass('is-loading');
-            });
+            }));
         },
 
         _fetchPaginatedEvents: function(start, end) {
@@ -943,6 +942,9 @@ define([
         },
 
         _onListViewChange: function(view, element) {
+            if (['listDay','listWeek','listMonth','listYear'].indexOf(view.type) < 0)
+                return;
+
             var categories = ['Time', 'Account', 'Location', 'Meeting room', 'Product', 'Status'];
             var $elem = $(element);
             var $heading = $elem.find('.fc-list-heading');
@@ -979,8 +981,6 @@ define([
                 hasNotes = !!mxObj.get(this.eventNotes),
                 status = mxObj.get(this.eventStatus);
 
-            var mxFetch = key => new Promise((resolve, reject) => mxObj.fetch(key, resolve));
-
             var html = '<td class="fc-list-item-time fc-widget-content">'+time+'</td>'
                 + '<td class="fc-list-item-title fc-widget-content">' + account + '</td>'
                 + '<td class="fc-list-item-location fc-widget-content">' + group + '</td>'
@@ -995,15 +995,12 @@ define([
 
             element.html($html);
 
-            Promise.all([
-                mxFetch(this.eventOptionsPath),
-                mxFetch(this.eventCateringPath)
-            ]).then(values => {
-                var room_options = values[0];
-                var catering_options = values[1];
-                var icons = this.createEventIcons(nrOfPeople, room_options, catering_options, hasNotes);
+            mxObj.fetch(this.eventOptionPath, lang.hitch(this, function (eventOption) {
+                var catering = eventOption.get('Catering') === 'Yes';
+                var equipment = eventOption.get('Equipment') === 'Yes';
+                var icons = this.createEventIcons(nrOfPeople, equipment, catering, hasNotes);
                 $html.filter('.fc-list-item-product').append(icons);
-            });
+            }));
         },
     });
 });

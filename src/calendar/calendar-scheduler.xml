@@ -146,25 +146,15 @@
                 <attributeType name="Enum" />
             </attributeTypes>
         </property>
-        <property key="eventOptionsEntity" type="entity" allowNonPersistableEntities="true">
-            <caption>Event options Entity</caption>
+        <property key="eventOptionEntity" type="entity" allowNonPersistableEntities="true">
+            <caption>Event Option Entity</caption>
             <category>Event data</category>
-            <description>The entity.</description>
+            <description>The Event Option entity.</description>
         </property>
-        <property key="eventOptionsPath" type="entity" isPath="yes" pathType="reference" entityProperty="eventOptionsEntity">
-            <caption>Options event reference</caption>
+        <property key="eventOptionPath" type="entity" isPath="yes" pathType="reference" entityProperty="eventOptionEntity">
+            <caption>Event Option</caption>
             <category>Event data</category>
-            <description>The reference from an option to an event.</description>
-        </property>
-        <property key="eventCateringEntity" type="entity" allowNonPersistableEntities="true">
-            <caption>Event catering Entity</caption>
-            <category>Event data</category>
-            <description>The entity.</description>
-        </property>
-        <property key="eventCateringPath" type="entity" isPath="yes" pathType="reference" entityProperty="eventCateringEntity">
-            <caption>Event catering reference</caption>
-            <category>Event data</category>
-            <description>The reference from the event to the catering</description>
+            <description>The reference from the event to the event option.</description>
         </property>
 
         <!-- BEHAVIOR -->
