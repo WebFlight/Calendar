@@ -15,9 +15,8 @@ define([
 
     "calendar/lib/jquery",
     "calendar/lib/moment",
-    "calendar/lib/fullcalendar",
-    "calendar/lib/locale-all"
-], function(declare, _WidgetBase, dom, dojoDom, domQuery, domProp, domGeom, domClass, domStyle, domConstruct, dojoArray, lang, _jQuery, moment, fullCalendar, calendarLocale) {
+    "calendar/lib/fullcalendar"
+], function(declare, _WidgetBase, dom, dojoDom, domQuery, domProp, domGeom, domClass, domStyle, domConstruct, dojoArray, lang, _jQuery, moment, fullCalendar) {
     "use strict";
 
     var $ = _jQuery.noConflict(true);
