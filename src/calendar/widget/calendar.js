@@ -15,9 +15,8 @@ define([
 
     "calendar/lib/jquery",
     "calendar/lib/moment",
-    "calendar/lib/fullcalendar",
-    "calendar/lib/locale-all"
-], function(declare, _WidgetBase, dom, dojoDom, domQuery, domProp, domGeom, domClass, domStyle, domConstruct, dojoArray, lang, _jQuery, moment, fullCalendar, calendarLocale) {
+    "calendar/lib/fullcalendar"
+], function(declare, _WidgetBase, dom, dojoDom, domQuery, domProp, domGeom, domClass, domStyle, domConstruct, dojoArray, lang, _jQuery, moment, fullCalendar) {
     "use strict";
 
     var $ = _jQuery.noConflict(true);
@@ -126,23 +125,56 @@ define([
             var resourceTitle = this.resourceTitle;
             var groupTitle = this.groupTitle;
             var node = this._fcNode;
+            var groupResourcePath = this.groupResourcePath;
 
-            resources.forEach(function(resource) {
-                var fullCalenderResource = {};
-                fullCalenderResource.title = resource.get(resourceTitle);
-                fullCalenderResource.id = resource.getGuid();
+            if (!groupResourcePath) {
+                resources.forEach(function(resource) {
+                    var fullCalendarResource = {};
+                    fullCalendarResource.title = resource.get(resourceTitle);
+                    fullCalendarResource.id = resource.getGuid();
+                    node.fullCalendar("addResource", fullCalendarResource);
+                });
+                return;
+            }
 
-                if (this.groupResourcePath) {
-                    resource.fetch(this.groupResourcePath, lang.hitch(this, function(group) {
+            var promises = [];
+            var fetchedResources = [];
+            resources.forEach(function (resource) {
+                var promise = $.Deferred(lang.hitch(this, function(callback) {
+                    var fullCalendarResource = {};
+                    fullCalendarResource.title = resource.get(resourceTitle);
+                    fullCalendarResource.id = resource.getGuid();
+                    resource.fetch(groupResourcePath, lang.hitch(this, function(group) {
                         if (group) {
-                            fullCalenderResource.group = group.get(groupTitle);
+                            fullCalendarResource.group = group.get(groupTitle);
                         }
-                        node.fullCalendar("addResource", fullCalenderResource);
-                    }))
-                    return;
-                }
-                node.fullCalendar("addResource", fullCalenderResource);
-            }, this);
+                        fetchedResources.push(fullCalendarResource);
+                        callback.resolve();
+                    }));
+                }));
+                promises.push(promise);
+            });
+
+            $.when.apply($, promises).done(lang.hitch(this, function () {
+                fetchedResources.sort(function (a, b) {
+                    if(a.group === b.group) {
+                        if (a.title < b.title) return -1;
+                        if (a.title > b.title) return 1;
+                        return 0;
+                    }
+                    return a.group < b.group ? -1 : 1
+                });
+
+                $.each(fetchedResources, function (key, resource) {
+                    node.fullCalendar("addResource", resource);
+                });
+
+                var xpath = "//" + this.eventEntity + this.eventConstraint;
+                mx.data.get({
+                    xpath: xpath,
+                    callback: lang.hitch(this, this._prepareEvents)
+                }, this);
+            }));
         },
 
         _resetSubscriptions: function() {
@@ -213,11 +245,11 @@ define([
                     return;
                 }
 
-                xpath = "//" + this.eventEntity + constraint;
-                mx.data.get({
-                    xpath: xpath,
-                    callback: lang.hitch(this, this._prepareEvents)
-                }, this);
+                // xpath = "//" + this.eventEntity + constraint;
+                // mx.data.get({
+                //     xpath: xpath,
+                //     callback: lang.hitch(this, this._prepareEvents)
+                // }, this);
             } else if (this.dataSourceType === "contextmf_viewspecific" && this.contextDatasourceMf) {
                 logger.debug(this.id + "._fetchObjects contextmf_viewspecific");
                 if (this._mxObj && this.viewContextReference) {
@@ -440,8 +472,7 @@ define([
             var obj = event.mxobject;
             this._setVariables(obj, event, this.startAttr, this.endAttr, event.allDay);
             this._setResourceReference(obj, this.neweventref, event.resourceId, this._mxObj);
-            logger.debug(obj)
-            this._execMF(obj, this.onchangemf, () => alert("hoi tim"));
+            this._execMF(obj, this.onchangemf);
         },
 
         _onEventClick: function(event) {
